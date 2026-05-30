@@ -35,31 +35,6 @@ function generateTid(message) {
 }
 
 // ------------------------
-// TEST ROUTE (old compatibility)
-// ------------------------
-
-app.get("/api/transactions", async (req, res) => {
-  try {
-    console.log("Reading transactions...");
-
-    // Add a timeout to prevent hanging
-    const snap = await Promise.race([
-      db.ref("transactions").get(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Database query timeout")), 5000)
-      )
-    ]);
-
-    console.log("Read successful");
-    return res.json(snap.val() || {});
-  } catch (err) {
-    console.error("Firebase error:", err);
-    return res.status(500).json({
-      error: err.message
-    });
-  }
-});
-// ------------------------
 // GET ALL TRANSACTIONS (FIXED + NO HANG)
 // ------------------------
 app.get("/api/transactions", async (req, res) => {
