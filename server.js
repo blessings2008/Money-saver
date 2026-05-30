@@ -72,6 +72,51 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
+// DEBUG: Test Firebase connectivity
+app.get("/api/debug-firebase", async (req, res) => {
+  try {
+    console.log("🔍 Testing Firebase write operation...");
+    
+    const testData = { 
+      timestamp: Date.now(),
+      test: "debug"
+    };
+    
+    await Promise.race([
+      db.ref("_test_connection").set(testData),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Write operation timeout after 5s")), 5000)
+      )
+    ]);
+    
+    console.log("✅ Firebase write successful");
+    
+    // Now try to read it back
+    const snap = await db.ref("_test_connection").get();
+    
+    res.json({ 
+      success: true, 
+      message: "Firebase is working!",
+      written: testData,
+      read: snap.val(),
+      connected: firebaseConnected
+    });
+  } catch (err) {
+    console.error("❌ Firebase debug error:", err.message);
+    res.status(503).json({ 
+      error: err.message, 
+      code: err.code,
+      connected: firebaseConnected,
+      tips: [
+        "1. Check Firebase database exists at: https://console.firebase.google.com",
+        "2. Verify rules allow read/write (set to public for testing)",
+        "3. Check serviceAccountKey.json is valid",
+        "4. Ensure network can reach Firebase (no VPN/firewall blocking)"
+      ]
+    });
+  }
+});
+
 // ------------------------
 // GENERATE UNIQUE ID (ANTI DUPLICATE)
 // ------------------------
