@@ -13,24 +13,41 @@ app.use(express.json());
 // ------------------------
 const serviceAccount = require("./serviceAccountKey.json");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://money-saver-e0504-default-rtdb.firebaseio.com"
-});
+console.log("📋 Service Account Project ID:", serviceAccount.project_id);
+console.log("📋 Service Account Email:", serviceAccount.client_email);
+
+let firebaseApp;
+try {
+  firebaseApp = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://money-saver-e0504-default-rtdb.firebaseio.com"
+  });
+  console.log("✅ Firebase Admin SDK initialized");
+} catch (err) {
+  console.error("❌ Firebase init failed:", err.message);
+}
 
 const db = admin.database();
 
 // Track Firebase connection state
 let firebaseConnected = false;
 
+console.log("🔄 Listening for Firebase connection state...");
 db.ref(".info/connected").on("value", (snapshot) => {
   if (snapshot.val() === true) {
     firebaseConnected = true;
-    console.log("✅ Firebase connected");
+    console.log("✅ Firebase connected at", new Date().toISOString());
   } else {
     firebaseConnected = false;
-    console.log("❌ Firebase disconnected");
+    console.log("❌ Firebase disconnected at", new Date().toISOString());
   }
+}, (err) => {
+  console.error("❌ Error listening to connection state:", err.message);
+});
+
+// Also log connection errors
+db.on("error", (err) => {
+  console.error("❌ Firebase connection error:", err.message);
 });
 
 // ------------------------
@@ -41,78 +58,118 @@ app.get("/", (req, res) => {
   res.json({
     message: "💰 Money Saver Backend Running",
     firebase: firebaseConnected ? "connected" : "disconnected",
-    status
+    status,
+    timestamp: new Date().toISOString()
   });
 });
 
 // Firebase health check endpoint
 app.get("/api/health", async (req, res) => {
+  console.log("📊 Health check requested");
   try {
     const start = Date.now();
     
+    console.log("🔍 Attempting to read .info/connected...");
     await Promise.race([
       db.ref(".info/connected").get(),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Firebase health check timeout")), 3000)
+        setTimeout(() => reject(new Error("Firebase health check timeout after 3s")), 3000)
       )
     ]);
 
     const duration = Date.now() - start;
+    console.log(`✅ Health check passed in ${duration}ms`);
     res.json({
       firebase: "ok",
       responseTime: `${duration}ms`,
-      connected: firebaseConnected
+      connected: firebaseConnected,
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
+    console.error("❌ Health check failed:", err.message);
     res.status(503).json({
       firebase: "error",
       message: err.message,
-      connected: firebaseConnected
+      connected: firebaseConnected,
+      timestamp: new Date().toISOString()
     });
   }
 });
 
-// DEBUG: Test Firebase connectivity
+// DEBUG: Test Firebase connectivity with detailed logging
 app.get("/api/debug-firebase", async (req, res) => {
+  console.log("\n=== FIREBASE DEBUG TEST ===");
+  console.log("📍 Timestamp:", new Date().toISOString());
+  console.log("📍 Current connection state:", firebaseConnected);
+  
   try {
-    console.log("🔍 Testing Firebase write operation...");
-    
+    console.log("🔍 Step 1: Creating test data object...");
     const testData = { 
       timestamp: Date.now(),
-      test: "debug"
+      test: "debug",
+      serverTime: new Date().toISOString()
     };
+    console.log("✅ Test data created:", testData);
+    
+    console.log("🔍 Step 2: Attempting to write to Firebase...");
+    const startWrite = Date.now();
+    
+    const writePromise = db.ref("_test_connection").set(testData);
+    console.log("🔄 Write promise created, waiting for completion...");
     
     await Promise.race([
-      db.ref("_test_connection").set(testData),
+      writePromise,
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Write operation timeout after 5s")), 5000)
+        setTimeout(() => {
+          console.error("⏱️ Write timeout! Database URL: https://money-saver-e0504-default-rtdb.firebaseio.com");
+          reject(new Error("Write operation timeout after 5s"));
+        }, 5000)
       )
     ]);
     
-    console.log("✅ Firebase write successful");
+    const writeDuration = Date.now() - startWrite;
+    console.log(`✅ Firebase write successful in ${writeDuration}ms`);
     
-    // Now try to read it back
+    console.log("🔍 Step 3: Reading back the data...");
+    const startRead = Date.now();
     const snap = await db.ref("_test_connection").get();
+    const readDuration = Date.now() - startRead;
+    
+    console.log(`✅ Firebase read successful in ${readDuration}ms`);
+    console.log("📊 Data read:", snap.val());
+    
+    console.log("=== TEST PASSED ===\n");
     
     res.json({ 
       success: true, 
       message: "Firebase is working!",
       written: testData,
       read: snap.val(),
-      connected: firebaseConnected
+      connected: firebaseConnected,
+      timings: {
+        write: `${writeDuration}ms`,
+        read: `${readDuration}ms`
+      },
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
     console.error("❌ Firebase debug error:", err.message);
+    console.error("Error code:", err.code);
+    console.error("Error details:", err);
+    console.log("=== TEST FAILED ===\n");
+    
     res.status(503).json({ 
       error: err.message, 
       code: err.code,
       connected: firebaseConnected,
+      databaseURL: "https://money-saver-e0504-default-rtdb.firebaseio.com",
       tips: [
-        "1. Check Firebase database exists at: https://console.firebase.google.com",
-        "2. Verify rules allow read/write (set to public for testing)",
-        "3. Check serviceAccountKey.json is valid",
-        "4. Ensure network can reach Firebase (no VPN/firewall blocking)"
-      ]
+        "1. Verify Firebase Realtime Database exists at: https://console.firebase.google.com",
+        "2. Check database rules allow read/write (temporarily set to public)",
+        "3. Verify serviceAccountKey.json is valid and matches your Firebase project",
+        "4. Check server logs above for detailed error information"
+      ],
+      timestamp: new Date().toISOString()
     });
   }
 });
@@ -289,6 +346,8 @@ app.get("/api/transfers", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`\n🚀 Server running on port ${PORT}`);
   console.log("Firebase connection status: ", firebaseConnected ? "✅ Connected" : "⏳ Connecting...");
+  console.log("Database URL: https://money-saver-e0504-default-rtdb.firebaseio.com");
+  console.log("Check /api/debug-firebase for diagnostics\n");
 });
