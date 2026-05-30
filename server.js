@@ -37,10 +37,24 @@ function generateTid(message) {
 // ------------------------
 // TEST ROUTE (old compatibility)
 // ------------------------
-app.get("/api/transaction", (req, res) => {
-  res.json({ status: "single route works" });
-});
 
+app.get("/api/transactions", async (req, res) => {
+  try {
+    console.log("Reading transactions...");
+
+    const snap = await db.ref("transactions").get();
+
+    console.log("Read successful");
+
+    return res.json(snap.val() || {});
+  } catch (err) {
+    console.error("Firebase error:", err);
+
+    return res.status(500).json({
+      error: err.message
+    });
+  }
+});
 // ------------------------
 // GET ALL TRANSACTIONS (FIXED + NO HANG)
 // ------------------------
