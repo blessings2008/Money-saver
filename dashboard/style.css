@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #0b1220;
+  color: #e5e7eb;
+  font-family: 'Inter', sans-serif;
+}
+
+/* MAIN WRAPPER */
+#transactions {
+  padding: 18px;
+  max-width: 900px;
+  margin: auto;
+}
+
+/* HEADER DASHBOARD */
+.dashboard {
+  background: linear-gradient(135deg, #0ea5e9, #22c55e);
+  padding: 22px;
+  border-radius: 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+.dashboard h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.dashboard p {
+  opacity: 0.9;
+  margin-top: 6px;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.box {
+  background: rgba(255,255,255,0.12);
+  padding: 14px;
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.box h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.box p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* INSIGHT */
+.insight {
+  background: #111827;
+  padding: 16px;
+  border-radius: 16px;
+  margin: 18px 0;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* CHART */
+.chart-section {
+  background: #111827;
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.bar {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.income-bar {
+  background: #22c55e;
+}
+
+.expense-bar {
+  background: #ef4444;
+}
+
+/* CARD */
+.card {
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 16px;
+  border-radius: 18px;
+  margin-bottom: 12px;
+  transition: 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* TOP ROW */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.amount {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* TYPE COLORS */
+.income {
+  border-left: 4px solid #22c55e;
+}
+
+.expense {
+  border-left: 4px solid #ef4444;
+}
+
+.gambling {
+  border-left: 4px solid #f59e0b;
+}
+
+.airtime {
+  border-left: 4px solid #38bdf8;
+}
+
+/* MESSAGE */
+.message {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* WARNING */
+.warning {
+  margin-top: 10px;
+  color: #f87171;
+  font-size: 12px;
+}
+
+/* SMALL TEXT */
+.small {
+  font-size: 12px;
+  opacity: 0.7;
+}
