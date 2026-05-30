@@ -24,38 +24,46 @@ const db = admin.database();
 // HEALTH CHECK
 // ------------------------
 app.get("/", (req, res) => {
-  res.send("Money Saver Backend Running 🚀");
+  res.send("💰 Money Saver Backend Running 🚀");
 });
 
 // ------------------------
-// HASH ID (ANTI-DUPLICATE CORE)
+// GENERATE UNIQUE ID (ANTI DUPLICATE)
 // ------------------------
 function generateTid(message) {
   return crypto.createHash("sha256").update(message).digest("hex");
 }
 
 // ------------------------
-// SAVINGS RULE ENGINE (NO MANUAL APPROVAL)
+// TEST ROUTE (old compatibility)
 // ------------------------
-function calculateSavings(amount) {
-  let percent = 0;
-  let status = "blocked";
+app.get("/api/transaction", (req, res) => {
+  res.json({ status: "single route works" });
+});
 
-  if (amount >= 5000) {
-    percent = 40;
-    status = "autoApproved";
-  } else if (amount >= 1000) {
-    percent = 25;
-    status = "autoDeferred";
+// ------------------------
+// GET ALL TRANSACTIONS (FIXED + NO HANG)
+// ------------------------
+app.get("/api/transactions", async (req, res) => {
+  try {
+    const ref = db.ref("transactions");
+
+    const snap = await Promise.race([
+      ref.get(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Firebase timeout")), 8000)
+      )
+    ]);
+
+    res.json(snap.val() || {});
+  } catch (err) {
+    console.log("❌ /api/transactions error:", err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  const saveAmount = Math.floor((amount * percent) / 100);
-
-  return { percent, saveAmount, status };
-}
+});
 
 // ------------------------
-// MAIN SMS PROCESSING ENDPOINT
+// PROCESS SMS / TRANSACTION ENGINE
 // ------------------------
 app.post("/api/process-sms", async (req, res) => {
   try {
@@ -67,54 +75,53 @@ app.post("/api/process-sms", async (req, res) => {
 
     const tid = generateTid(message);
 
+    // Extract amount (basic parser)
     const amountMatch = message.match(/(?:MK|MWK)\s?([\d,]+)/i);
     const amount = amountMatch
       ? Number(amountMatch[1].replace(/,/g, ""))
       : 0;
 
-    const savings = calculateSavings(amount);
+    // Simple savings logic
+    let saveAmount = 0;
+    let savingsStatus = "blocked";
+
+    if (amount >= 5000) {
+      saveAmount = Math.floor(amount * 0.4);
+      savingsStatus = "autoApproved";
+    } else if (amount >= 1000) {
+      saveAmount = Math.floor(amount * 0.25);
+      savingsStatus = "autoDeferred";
+    }
 
     const transaction = {
       tid,
       message,
       amount,
-      saveAmount: savings.saveAmount,
-      savingsPercent: savings.percent,
-      savingsStatus: savings.status,
+      saveAmount,
+      savingsStatus,
       timestamp: Date.now()
     };
 
-    // STORE (NO DUPLICATES)
+    // STORE IN FIREBASE (NO DUPLICATES)
     await db.ref(`transactions/${tid}`).set(transaction);
 
-    // AUTO TRANSFER QUEUE (ONLY IF APPROVED)
-    if (savings.status === "autoApproved") {
+    // AUTO TRANSFER QUEUE
+    if (savingsStatus === "autoApproved") {
       await db.ref(`transfers/${tid}`).set({
         tid,
-        amount: savings.saveAmount,
+        amount: saveAmount,
         status: "queued",
         createdAt: Date.now()
       });
     }
 
-    return res.json({
+    res.json({
       success: true,
       transaction
     });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// ------------------------
-// GET ALL TRANSACTIONS
-// ------------------------
-app.get("/api/transactions", async (req, res) => {
-  try {
-    const snap = await db.ref("transactions").get();
-    res.json(snap.val() || {});
-  } catch (err) {
+    console.log("❌ process-sms error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -132,6 +139,10 @@ app.get("/api/transfers", async (req, res) => {
 });
 
 // ------------------------
-app.listen(3000, () => {
-  console.log("🚀 Server running on port 3000");
+// SERVER START (RENDER SAFE)
+// ------------------------
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
