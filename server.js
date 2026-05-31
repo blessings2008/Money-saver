@@ -45,8 +45,8 @@ db.ref(".info/connected").on("value", (snapshot) => {
   console.error("❌ Error listening to connection state:", err.message);
 });
 
-// Also log connection errors
-db.on("error", (err) => {
+// Listen for connection errors on the database ref
+db.ref().on("error", (err) => {
   console.error("❌ Firebase connection error:", err.message);
 });
 
