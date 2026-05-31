@@ -45,6 +45,17 @@ db.ref(".info/connected").on("value", (snapshot) => {
   console.error("❌ Error listening to connection state:", err.message);
 });
 
+// Add timeout warning if Firebase doesn't connect within 10 seconds
+setTimeout(() => {
+  if (!firebaseConnected) {
+    console.warn("⚠️ Firebase not connected within 10 seconds. Check your:");
+    console.warn("   - serviceAccountKey.json validity");
+    console.warn("   - Database URL: https://money-saver-e0504-default-rtdb.firebaseio.com");
+    console.warn("   - Firebase project status");
+    console.warn("   - Network connectivity");
+  }
+}, 10000);
+
 // ------------------------
 // HEALTH CHECK
 // ------------------------
@@ -160,9 +171,11 @@ app.get("/api/debug-firebase", async (req, res) => {
       databaseURL: "https://money-saver-e0504-default-rtdb.firebaseio.com",
       tips: [
         "1. Verify Firebase Realtime Database exists at: https://console.firebase.google.com",
-        "2. Check database rules allow read/write (temporarily set to public)",
-        "3. Verify serviceAccountKey.json is valid and matches your Firebase project",
-        "4. Check server logs above for detailed error information"
+        "2. Check database rules allow read/write (temporarily set to public for testing)",
+        "3. Verify serviceAccountKey.json is valid and not expired",
+        "4. Check your Firebase project is active and billing enabled",
+        "5. Ensure network connectivity is available",
+        "6. Check server logs above for detailed error information"
       ],
       timestamp: new Date().toISOString()
     });
